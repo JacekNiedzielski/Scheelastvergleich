@@ -1,0 +1,19 @@
+version: '3'
+servivces:
+  flask-web:
+      build:
+          context: .
+          target: builder
+      # flask requires SIGINT to stop gracefully
+      # (default stop signal from Compose is SIGTERM)
+      stop_signal: SIGINT
+      ports:
+          - "8000:8000" #linke Seite localler Port, rechts Port in MiniPC
+      restart: always
+      networks:
+          - kvb_main
+
+networks:
+  kvb_main:
+      external:
+          name: kvb_main

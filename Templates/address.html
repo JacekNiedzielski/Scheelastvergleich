@@ -5,34 +5,51 @@
      
 <div class="container">
     <div class="row justify-content-start">
-        <div class="col-5 h1">Adresse und Dachtyp</div>
+        <div class="col-5 h1">Adresse und Bemessungsparameter</div>
     </div>
   
 
     <form id="address_form" action="{{ url_for('show_snow_at_address') }}" method="POST">
 
         <div class ="row justify-content-start">
-            <div class="col-1 col-form-label"><label for="street">Street</label></div>
+            <div class="col-3 col-form-label"><label for="street">Street</label></div>
             <div class="col-4"><input type="text" id="street" name="street" class="form-control" value="Stephansplatz"></div>
         </div>   
         
         <div class ="row justify-content-start">
-            <div class="col-1 col-form-label"><label for="house_number">House number</label></div>
+            <div class="col-3 col-form-label"><label for="house_number">House number</label></div>
             <div class="col-4"><input type="text" id="house_number" name="house_number" class="form-control" value="1"></div>
         </div>  
         
         <div class ="row justify-content-start">
-            <div class="col-1 col-form-label"><label for="postal_code">Postal Code</label></div>
+            <div class="col-3 col-form-label"><label for="postal_code">Postal Code</label></div>
             <div class="col-4"><input type="text" id="postal_code" name="postal_code" class="form-control" value="1010"></div>
         </div>
       
         <div class ="row justify-content-start">
-            <div class="col-1 col-form-label"><label for="city">City</label></div>
+            <div class="col-3 col-form-label"><label for="city">City</label></div>
             <div class="col-4"><input type="text" id="city" name="city" class="form-control" value="Wien"></div>
         </div>
         <br>
         <div class ="row justify-content-start">
-            <div class="col-1 col-form-label"><label for="roof_type">Dachtyp</label></div>
+            <div class="col-3 col-form-label"><label for="seehoehe">Seehöhe (für die Berechnungen laut alten Normen)</label></div>
+            <div class="col-4"><input type="text" id="seehoehe" name="seehoehe" class="form-control" value="Seehoehe von Stadt"></div>
+        </div>
+        <br>
+       
+        <div class ="row justify-content-start">
+            <div class="col-3 col-form-label"><label for="einrichtungsjahr">Einrichtungsjahr</label></div>
+            <div class="col-4">
+                <select id="einrichtungsjahr" name="einrichtungsjahr" class="form-select">
+                    {% for year in years %}
+                    <option value="{{ year }}">{{ year }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        <br>
+        <div class ="row justify-content-start">
+            <div class="col-3 col-form-label"><label for="roof_type">Dachtyp</label></div>
             <div class="col-4">
                 <select id="roof_type" name="roof_type" class="form-select" value="Pultdach">
                 <option value = "Pultdach">Pultdach</option>
@@ -45,7 +62,7 @@
           
         <br>
         <div class="row justify-content-start">
-            <div class="col-1"></div>
+            <div class="col-3"></div>
             <div class="col-2"><input type="submit" value="Weiter" class="btn btn-primary"></div>
         </div>
 

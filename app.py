@@ -3,6 +3,7 @@ import json
 import requests
 import pandas as pd
 import math
+import datetime
 
 
 app = Flask(__name__)
@@ -18,6 +19,15 @@ def shorten(element):
 df.Stadt = df.Stadt.apply(shorten)
 
 
+today = datetime.date.today()
+current_year = today.year
+
+years = []
+
+for year in range(1984,current_year+1):
+    years.append(year)
+
+
 
 @app.route("/")
 def index():
@@ -27,7 +37,7 @@ def index():
 def show_snow_at_address(old_snow=df):
     
     if request.method == "GET":
-        return render_template("address.html")
+        return render_template("address.html", current_year = current_year, years = years)
 
     else:
         street = "Stephansplatz"
@@ -49,11 +59,11 @@ def show_snow_at_address(old_snow=df):
         address_string = street + " " + house_number + ", " + postal_code + " " + city
 
         params = {"address": address_string}
-        
+        print(address_string)
         r = requests.get("https://hora.gv.at/Services/Data", params)
 
         data = r.json()
-
+        schneelast = round(float(data["data"]["schneelast"]),3)
 
         if city == "Wien" and postal_code == "1010":
             city = "Wien  1.,Innere Stadt"
@@ -127,13 +137,130 @@ def show_snow_at_address(old_snow=df):
         else:
             city = city
 
-        schneelast = round(float(data["data"]["schneelast"]),3)
-        print(schneelast)
-        #print(city)
-        #print(old_snow.tail())
-        index = old_snow.loc[old_snow.Stadt == city]["Schneeregellast"].index[0]
-        schnee_alt = old_snow.loc[old_snow.Stadt == city]["Schneeregellast"][index]
-        #print(schnee_alt)
+
+        #Schneezone gemäß ÖNORM B 4013
+        schneezone_4013 = old_snow.loc[old_snow.Stadt == city]["Schneezone_4013"][old_snow.loc[old_snow.Stadt == city]["Schneezone_4013"].index[0]]
+        #Schneezone gemäß EC 2006
+        schneezone_EC2006 = old_snow.loc[old_snow.Stadt == city]["Schneezone_EC2006"][old_snow.loc[old_snow.Stadt == city]["Schneezone_EC2006"].index[0]]
+
+        seehoehe = "Seehoehe von Stadt"
+
+        if "seehoehe" in request.form:
+            seehoehe = request.form["seehoehe"]
+            
+            if seehoehe == "Seehoehe von Stadt":
+                #Schneeregellast gemäß ÖNORM B 4013 und EC 2006 ohne explizite Eingabe von Seehöhe (Wert für Stadt)
+                schneeregellast_4013 = old_snow.loc[old_snow.Stadt == city]["Schneeregellast_4013"][old_snow.loc[old_snow.Stadt == city]["Schneeregellast_4013"].index[0]]
+                schneeregellast_EC2006 = old_snow.loc[old_snow.Stadt == city]["Schneeregellast_EC2006"][old_snow.loc[old_snow.Stadt == city]["Schneeregellast_EC2006"].index[0]]
+
+            else:
+                seehoehe = int(seehoehe)
+
+                if schneezone_4013 == "A" and seehoehe >= 200:
+                    schneeregellast_4013 = 0.71 - 0.30*seehoehe/1000 + 2.58*(seehoehe/1000)**2
+        
+                elif schneezone_4013 == "A" and seehoehe < 200:
+                    schneeregellast_4013 = 0.75
+                
+                elif schneezone_4013 == "B" and seehoehe >= 300:
+                    schneeregellast_4013 = 1.75 - 1.85*seehoehe/1000 + 3.75*(seehoehe/1000)**2
+        
+                elif schneezone_4013 == "B" and seehoehe < 300:
+                    schneeregellast_4013 = 1.55
+        
+                elif schneezone_4013 == "C":
+                    schneeregellast_4013 = 2.27 - 2.26*seehoehe/1000 + 4.92*(seehoehe/1000)**2
+        
+                elif schneezone_4013 == "C*" and seehoehe <= 700:
+                    schneeregellast_4013 = max(2.27 - 2.26*seehoehe/1000 + 4.92*(seehoehe/1000)**2, 3.8)
+
+                elif schneezone_4013 == "C*" and seehoehe > 700:
+                    schneeregellast_4013 = (2.27 - 2.26*seehoehe/1000 + 4.92*(seehoehe/1000)**2)*1.2
+    
+                elif schneezone_4013 == "D":
+                    schneeregellast_4013 = min(1.25 - 2.20*seehoehe/1000 + 3.04*(seehoehe/1000)**2, 4.5)
+        
+                elif schneezone_4013 == "A/B" and seehoehe < 200:
+                    schneeregellast_4013 = (0.75+1.55)/2
+            
+                elif schneezone_4013 == "A/B" and seehoehe >= 200 and seehoehe < 300:
+                    schneeregellast_4013 = ( (0.71 - 0.30*seehoehe/1000 + 2.58*(seehoehe/1000)**2) + 1.55 ) / 2
+        
+                elif schneezone_4013 == "A/B" and seehoehe >= 300:
+                    schneeregellast_4013 = ( (0.71 - 0.30*seehoehe/1000 + 2.58*(seehoehe/1000)**2) 
+                                + (1.75 - 1.85*seehoehe/1000 + 3.75*(seehoehe/1000)**2) ) / 2
+            
+                elif schneezone_4013 == "B/C" and seehoehe < 300: 
+                    schneeregellast_4013 = ( 1.55 + (2.27 - 2.26*seehoehe/1000 + 4.92*(seehoehe/1000)**2) ) / 2
+                    
+                elif schneezone_4013 == "B/C" and seehoehe >= 300:
+                    schneeregellast_4013 = ( (1.75 - 1.85*seehoehe/1000 + 3.75*(seehoehe/1000)**2) 
+                                + (2.27 - 2.26*seehoehe/1000 + 4.92*(seehoehe/1000)**2) ) / 2
+        
+                elif schneezone_4013 == "C/C*" and seehoehe <= 700: 
+                    schneeregellast_4013 = ( (2.27 - 2.26*seehoehe/1000 + 4.92*(seehoehe/1000)**2)
+                                + (max(2.27 - 2.26*seehoehe/1000 + 4.92*(seehoehe/1000)**2, 3.8)) ) / 2
+            
+                elif schneezone_4013 == "C/C*" and seehoehe > 700:
+                    schneeregellast_4013 = ( (2.27 - 2.26*seehoehe/1000 + 4.92*(seehoehe/1000)**2)
+                                + ((2.27 - 2.26*seehoehe/1000 + 4.92*(seehoehe/1000)**2)*1.2) ) / 2
+        
+                elif schneezone_4013 =="B/C*" and seehoehe < 300:
+                    schneeregellast_4013 = (1.55 + max(2.27 - 2.26*seehoehe/1000 + 4.92*(seehoehe/1000)**2, 3.8)) / 2
+            
+                elif schneezone_4013 =="B/C*" and seehoehe >= 300 and seehoehe <= 700:
+                    schneeregellast_4013 = ( (1.75 - 1.85*seehoehe/1000 + 3.75*(seehoehe/1000)**2)
+                                + (max(2.27 - 2.26*seehoehe/1000 + 4.92*(seehoehe/1000)**2, 3.8))) / 2
+        
+                elif schneezone_4013 =="B/C*" and seehoehe > 700:
+                    schneeregellast_4013 = ( (1.75 - 1.85*seehoehe/1000 + 3.75*(seehoehe/1000)**2)
+                                + ((2.27 - 2.26*seehoehe/1000 + 4.92*(seehoehe/1000)**2)*1.2) ) / 2
+        
+                elif schneezone_4013 =="A/D" and seehoehe < 200: 
+                    schneeregellast_4013 = ( 0.75 + min(1.25 - 2.20*seehoehe/1000 + 3.04*(seehoehe/1000)**2, 4.5)) / 2
+
+                elif schneezone_4013 =="A/D" and seehoehe >= 200:
+                    schneeregellast_4013 = ( (0.71 - 0.30*seehoehe/1000 + 2.58*(seehoehe/1000)**2)  
+                                + min(1.25 - 2.20*seehoehe/1000 + 3.04*(seehoehe/1000)**2, 4.5)) / 2
+
+                #########################################################################################################
+                
+                if schneezone_EC2006 == "2*":
+                    schneeregellast_EC2006 = max( (0.642 * 1.6 + 0.009) * (1 + (seehoehe / 728) ** 2), 1.0)
+                
+                elif schneezone_EC2006 == "2*/2":
+                    schneeregellast_EC2006 = max( (0.642 * 1.8 + 0.009) * (1 + (seehoehe / 728) ** 2), 1.15)
+
+                elif schneezone_EC2006 == "2":
+                    schneeregellast_EC2006 = max( (0.642 * 2 + 0.009) * (1 + (seehoehe / 728) ** 2), 1.3)
+
+                elif schneezone_EC2006 == "2/3":
+                    schneeregellast_EC2006 = max( (0.642 * 2.5 + 0.009) * (1 + (seehoehe / 728) ** 2), 1.6)
+
+                elif schneezone_EC2006 == "3":
+                    schneeregellast_EC2006 = max( (0.642 * 3 + 0.009) * (1 + (seehoehe / 728) ** 2), 1.9)
+
+                elif schneezone_EC2006 == "3/4":
+                    schneeregellast_EC2006 = max( (0.642 * 3.75 + 0.009) * (1 + (seehoehe / 728) ** 2), 2.4)
+
+                elif schneezone_EC2006 == "4":
+                    schneeregellast_EC2006 = max( (0.642 * 4.5 + 0.009) * (1 + (seehoehe / 728) ** 2), 2.9)
+
+        einrichtungsjahr = current_year
+        if "einrichtungsjahr" in request.form:
+            einrichtungsjahr = request.form["einrichtungsjahr"]
+            einrichtungsjahr = int(einrichtungsjahr)
+        
+        if einrichtungsjahr >= 1984 and einrichtungsjahr <= 2005:
+            schnee_alt = schneeregellast_4013
+            norm = "ÖNORM B 4013"
+        
+        elif einrichtungsjahr >= 2006 and  einrichtungsjahr < 2022:
+            schnee_alt = schneeregellast_EC2006
+            norm = "EN 1991-1-3 2006"
+
+        elif einrichtungsjahr >= 2022:
+            return render_template("no_pv_potential.html")
 
         roof_type = "Pultdach"
         if "roof_type" in request.form:
@@ -144,12 +271,13 @@ def show_snow_at_address(old_snow=df):
         session["schnee_alt"] = schnee_alt
         session["schneelast"] = schneelast
         session["address"] = address_string
+        session["norm"] = norm
         
         if roof_type == 'Satteldach':
-            return render_template("snow_and_Satteldach.html", schneelast=schneelast, address = address_string, schnee_alt=schnee_alt, roof_type=roof_type+'.png')
+            return render_template("snow_and_Satteldach.html", schneelast=schneelast, address = address_string, schnee_alt=schnee_alt, roof_type=roof_type+'.png', norm=norm)
 
         if roof_type == 'Pultdach':
-            return render_template("snow_and_Pultdach.html", schneelast=schneelast, address = address_string, schnee_alt=schnee_alt, roof_type=roof_type+'.png')
+            return render_template("snow_and_Pultdach.html", schneelast=schneelast, address = address_string, schnee_alt=schnee_alt, roof_type=roof_type+'.png', norm=norm)
 
 
 
@@ -160,19 +288,28 @@ def show_snow_on_roof_pultdach():
     schneelast = session["schneelast"]
     roof_type = session["roof_type"]
     address_string = session["address"]
+    norm = session["norm"]
 
     if request.method == "POST":
         roof_angle_pultdach = 0
         if "roof_angle_pultdach" in request.form:
             roof_angle_pultdach = request.form["roof_angle_pultdach"]
     
-    if int(roof_angle_pultdach) >= 0 and int(roof_angle_pultdach) < 30:
+    if int(roof_angle_pultdach) >= 0 and int(roof_angle_pultdach) < 30 and norm == "ÖNORM B 4013":
         µ_1_neu = 0.8
         µ_1_alt = 1.0 
 
-    elif int(roof_angle_pultdach) >= 30 and int (roof_angle_pultdach) < 60:
+    elif int(roof_angle_pultdach) >= 30 and int(roof_angle_pultdach) < 60 and norm == "ÖNORM B 4013":
         µ_1_neu = 0.8 * (60 - int(roof_angle_pultdach)) / 30
         µ_1_alt = 1.0 * (60 - int(roof_angle_pultdach)) / 30
+
+    elif int(roof_angle_pultdach) >= 0 and int(roof_angle_pultdach) < 30 and norm == "EN 1991-1-3 2006":
+        µ_1_neu = 0.8
+        µ_1_alt = 0.8        
+
+    elif int(roof_angle_pultdach) >= 30 and int(roof_angle_pultdach) < 60 and norm == "EN 1991-1-3 2006":
+        µ_1_neu = 0.8 * (60 - int(roof_angle_pultdach)) / 30
+        µ_1_alt = 0.8 * (60 - int(roof_angle_pultdach)) / 30
 
     elif int(roof_angle_pultdach) >= 60:
         µ_1_neu = 0
@@ -182,9 +319,7 @@ def show_snow_on_roof_pultdach():
     roof_schnee_neu = round(schneelast*µ_1_neu,3)
 
     return render_template("results_pultdach.html", schneelast=schneelast, address = address_string, schnee_alt=schnee_alt,
-    roof_angle_pultdach=roof_angle_pultdach, roof_schnee_alt=roof_schnee_alt, roof_schnee_neu=roof_schnee_neu, roof_type=roof_type+'.png')
-
-
+    roof_angle_pultdach=roof_angle_pultdach, roof_schnee_alt=roof_schnee_alt, roof_schnee_neu=roof_schnee_neu, roof_type=roof_type+'.png', norm=norm)
 
 
 
@@ -195,6 +330,7 @@ def show_snow_on_roof_satteldach():
     schneelast = session["schneelast"]
     roof_type = session["roof_type"]
     address_string = session["address"]
+    norm = session["norm"]
 
     if request.method == "POST":
         roof_angle_satteldach_1 = 0
@@ -206,36 +342,65 @@ def show_snow_on_roof_satteldach():
             roof_angle_satteldach_2 = request.form["roof_angle_satteldach_2"]
 
     
-    if int(roof_angle_satteldach_1) >= 0 and int(roof_angle_satteldach_1) < 15:
+    if int(roof_angle_satteldach_1) >= 0 and int(roof_angle_satteldach_1) < 15 and norm == "ÖNORM B 4013":
         µ_2_neu_1 = 0.8
         µ_2_alt_1 = 1.0
 
-    elif int(roof_angle_satteldach_1) >= 15 and int(roof_angle_satteldach_1) < 30:
+    elif int(roof_angle_satteldach_1) >= 15 and int(roof_angle_satteldach_1) < 30 and norm == "ÖNORM B 4013":
         µ_2_neu_1 = 0.8 + 0.2 * (int(roof_angle_satteldach_1) - 15) / 15
         µ_2_alt_1 = 1.0
 
-    elif int(roof_angle_satteldach_1) >= 30 and int(roof_angle_satteldach_1) < 60:
+    elif int(roof_angle_satteldach_1) >= 30 and int(roof_angle_satteldach_1) < 60 and norm == "ÖNORM B 4013":
         µ_2_neu_1 = 1.0 * (60 - int(roof_angle_satteldach_1)) / 30
         µ_2_alt_1 = 1.0 * (60 - int(roof_angle_satteldach_1)) / 30
 
+
+    elif int(roof_angle_satteldach_1) >= 0 and int(roof_angle_satteldach_1) < 15 and norm == "EN 1991-1-3 2006":
+        µ_2_neu_1 = 0.8
+        µ_2_alt_1 = 0.8    
+
+    elif int(roof_angle_satteldach_1) >= 15 and int(roof_angle_satteldach_1) < 30 and norm == "EN 1991-1-3 2006":
+        µ_2_neu_1 = 0.8 + 0.2 * (int(roof_angle_satteldach_1) - 15) / 15
+        µ_2_alt_1 = 0.8 
+    
+    elif int(roof_angle_satteldach_1) >= 30 and int(roof_angle_satteldach_1) < 60 and norm == "EN 1991-1-3 2006":
+        µ_2_neu_1 = 1.0 * (60 - int(roof_angle_satteldach_1)) / 30
+        µ_2_alt_1 = 0.8 * (60 - int(roof_angle_satteldach_1)) / 30
+    
     elif int(roof_angle_satteldach_1) >= 60:
         µ_2_neu_1 = 0
         µ_2_alt_1 = 0
 
 
 
-    if int(roof_angle_satteldach_2) >= 0 and int(roof_angle_satteldach_2) < 15:
+
+
+
+    if int(roof_angle_satteldach_2) >= 0 and int(roof_angle_satteldach_2) < 15 and norm == "ÖNORM B 4013":
         µ_2_neu_2 = 0.8
         µ_2_alt_2 = 1.0
 
-    elif int(roof_angle_satteldach_2) >= 15 and int(roof_angle_satteldach_2) < 30:
+    elif int(roof_angle_satteldach_2) >= 15 and int(roof_angle_satteldach_2) < 30 and norm == "ÖNORM B 4013":
         µ_2_neu_2 = 0.8 + 0.2 * (int(roof_angle_satteldach_2) - 15) / 15
         µ_2_alt_2 = 1.0
 
-    elif int(roof_angle_satteldach_2) >= 30 and int(roof_angle_satteldach_2) < 60:
+    elif int(roof_angle_satteldach_2) >= 30 and int(roof_angle_satteldach_2) < 60 and norm == "ÖNORM B 4013":
         µ_2_neu_2 = 1.0 * (60 - int(roof_angle_satteldach_2)) / 30
         µ_2_alt_2 = 1.0 * (60 - int(roof_angle_satteldach_2)) / 30
 
+
+    elif int(roof_angle_satteldach_2) >= 0 and int(roof_angle_satteldach_2) < 15 and norm == "EN 1991-1-3 2006":
+        µ_2_neu_2 = 0.8
+        µ_2_alt_2 = 0.8    
+
+    elif int(roof_angle_satteldach_2) >= 15 and int(roof_angle_satteldach_2) < 30 and norm == "EN 1991-1-3 2006":
+        µ_2_neu_2 = 0.8 + 0.2 * (int(roof_angle_satteldach_2) - 15) / 15
+        µ_2_alt_2 = 0.8 
+    
+    elif int(roof_angle_satteldach_2) >= 30 and int(roof_angle_satteldach_2) < 60 and norm == "EN 1991-1-3 2006":
+        µ_2_neu_2 = 1.0 * (60 - int(roof_angle_satteldach_2)) / 30
+        µ_2_alt_2 = 0.8 * (60 - int(roof_angle_satteldach_2)) / 30
+    
     elif int(roof_angle_satteldach_2) >= 60:
         µ_2_neu_2 = 0
         µ_2_alt_2 = 0
@@ -251,4 +416,4 @@ def show_snow_on_roof_satteldach():
     roof_angle_satteldach_1=roof_angle_satteldach_1, roof_angle_satteldach_2=roof_angle_satteldach_2, 
     roof_schnee_alt_1=roof_schnee_alt_1, roof_schnee_neu_1=roof_schnee_neu_1, 
     roof_schnee_alt_2=roof_schnee_alt_2, roof_schnee_neu_2=roof_schnee_neu_2,
-    roof_type=roof_type+'.png')
+    roof_type=roof_type+'.png', norm=norm)
