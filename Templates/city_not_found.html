@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+
+{% block content %}
+     
+<div class="container">
+    <div class="row justify-content-start">
+        <p>City not included in the old standard. Please choose the nearest city among available ones:</p>
+        <div class="col-5 h1">City choice</div>
+    </div>
+  
+
+    <form id="address_form" action="{{ url_for('show_snow_at_nearest_city') }}" method="POST">
+        
+
+        <div class ="row justify-content-start">
+            <div class="col-3 col-form-label"><label for="nearest_city">City</label></div>
+            <div class="col-4">
+                <select id="nearest_city" name="nearest_city" class="form-select">
+                    {% for city in cities %}
+                    <option value="{{city}}">{{city}}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+   
+        <br>
+        <div class="row justify-content-start">
+            <div class="col-3"></div>
+            <div class="col-2"><input type="submit" value="Weiter" class="btn btn-primary"></div>
+        </div>
+
+
+
+
+
+
+
+    </form>
+ 
+
+
+
+</div>
+{% endblock %}

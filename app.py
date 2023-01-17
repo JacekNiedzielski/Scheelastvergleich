@@ -1,16 +1,24 @@
-from flask import Flask, url_for, render_template, request, session
+from flask import Flask, url_for, render_template, request, session, redirect
 import json
 import requests
 import pandas as pd
 import math
 import datetime
+import os
 
+template_dir = os.path.abspath("Templates")
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder=template_dir)
 app.config["SECRET_KEY"] = "SomethingWhatNo1CanGuess!"
 
 df = pd.read_excel("Schneeregellasten.xlsx")
 df.drop("Unnamed: 0", inplace=True, axis=1)
+
+
+df_4000 = pd.read_excel("Schneeregellasten_4000.xlsx")
+df_4000.drop("Unnamed: 0", inplace=True, axis=1)
+
+
 
 def shorten(element):
     element = element[:-2]
@@ -18,26 +26,40 @@ def shorten(element):
 
 df.Stadt = df.Stadt.apply(shorten)
 
+cities_4013_EC = df.Stadt.sort_values().to_list()
+cities_4000 = df_4000.Stadt.sort_values().to_list()
+
+
 
 today = datetime.date.today()
 current_year = today.year
 
 years = []
 
-for year in range(1984,current_year+1):
+for year in range(1960,current_year+1):
     years.append(year)
 
 
 
 @app.route("/")
 def index():
-    return render_template("index.html")
+    return render_template("index.html", active_menu="Home")
+
+
+
+@app.route("/show_snow_at_nearest_city", methods=["GET", "POST"])
+def show_snow_at_nearest_city():
+    if request.method == "POST":
+        if "nearest_city" in request.form:
+            nearest_city = request.form["nearest_city"]
+            return render_template("address.html", nearest_city=nearest_city, current_year = current_year, years = years, active_menu="Eingabe von Daten")
+
 
 @app.route("/show_snow_at_address", methods=["GET", "POST"])
-def show_snow_at_address(old_snow=df):
+def show_snow_at_address(old_snow=df, old_snow_4000 = df_4000):
     
     if request.method == "GET":
-        return render_template("address.html", current_year = current_year, years = years)
+        return render_template("address.html", current_year = current_year, years = years, active_menu="Eingabe von Daten")
 
     else:
         street = "Stephansplatz"
@@ -64,7 +86,7 @@ def show_snow_at_address(old_snow=df):
 
         data = r.json()
         schneelast = round(float(data["data"]["schneelast"]),3)
-
+        #print(schneelast)
         if city == "Wien" and postal_code == "1010":
             city = "Wien  1.,Innere Stadt"
 
@@ -137,23 +159,44 @@ def show_snow_at_address(old_snow=df):
         else:
             city = city
 
+        
+        einrichtungsjahr = current_year
+        if "einrichtungsjahr" in request.form:
+            einrichtungsjahr = request.form["einrichtungsjahr"]
+            einrichtungsjahr = int(einrichtungsjahr)
 
-        #Schneezone gemäß ÖNORM B 4013
-        schneezone_4013 = old_snow.loc[old_snow.Stadt == city]["Schneezone_4013"][old_snow.loc[old_snow.Stadt == city]["Schneezone_4013"].index[0]]
-        #Schneezone gemäß EC 2006
-        schneezone_EC2006 = old_snow.loc[old_snow.Stadt == city]["Schneezone_EC2006"][old_snow.loc[old_snow.Stadt == city]["Schneezone_EC2006"].index[0]]
+
+        
+        if einrichtungsjahr >= 1984 and city in old_snow.Stadt.to_list():
+            #Schneezone gemäß ÖNORM B 4013
+            schneezone_4013 = old_snow.loc[old_snow.Stadt == city]["Schneezone_4013"][old_snow.loc[old_snow.Stadt == city]["Schneezone_4013"].index[0]]
+            #Schneezone gemäß EC 2006
+            schneezone_EC2006 = old_snow.loc[old_snow.Stadt == city]["Schneezone_EC2006"][old_snow.loc[old_snow.Stadt == city]["Schneezone_EC2006"].index[0]]
+        
+        elif einrichtungsjahr < 1984 and city in old_snow_4000.Stadt.tolist():
+       
+            schneeregellast_4000 = old_snow_4000["Schneeregellast"][old_snow_4000.loc[old_snow_4000.Stadt == city].index[0]]
+
+        elif einrichtungsjahr < 1984 and city not in old_snow_4000.Stadt.tolist():
+            return render_template("city_not_found.html", cities = cities_4000)
+        
+        else:
+            return render_template("city_not_found.html", cities = cities_4013_EC)
+
+
+    
 
         seehoehe = "Seehoehe von Stadt"
 
         if "seehoehe" in request.form:
             seehoehe = request.form["seehoehe"]
             
-            if seehoehe == "Seehoehe von Stadt":
+            if seehoehe == "Seehoehe von Stadt" and einrichtungsjahr >= 1984:
                 #Schneeregellast gemäß ÖNORM B 4013 und EC 2006 ohne explizite Eingabe von Seehöhe (Wert für Stadt)
                 schneeregellast_4013 = old_snow.loc[old_snow.Stadt == city]["Schneeregellast_4013"][old_snow.loc[old_snow.Stadt == city]["Schneeregellast_4013"].index[0]]
                 schneeregellast_EC2006 = old_snow.loc[old_snow.Stadt == city]["Schneeregellast_EC2006"][old_snow.loc[old_snow.Stadt == city]["Schneeregellast_EC2006"].index[0]]
 
-            else:
+            elif seehoehe != "Seehoehe von Stadt" and einrichtungsjahr >=1984:
                 seehoehe = int(seehoehe)
 
                 if schneezone_4013 == "A" and seehoehe >= 200:
@@ -246,12 +289,14 @@ def show_snow_at_address(old_snow=df):
                 elif schneezone_EC2006 == "4":
                     schneeregellast_EC2006 = max( (0.642 * 4.5 + 0.009) * (1 + (seehoehe / 728) ** 2), 2.9)
 
-        einrichtungsjahr = current_year
-        if "einrichtungsjahr" in request.form:
-            einrichtungsjahr = request.form["einrichtungsjahr"]
-            einrichtungsjahr = int(einrichtungsjahr)
+
         
-        if einrichtungsjahr >= 1984 and einrichtungsjahr <= 2005:
+        if einrichtungsjahr < 1984 and einrichtungsjahr >=1960:
+            schnee_alt = schneeregellast_4000
+            norm = "ÖNORM B 4000" 
+        
+        
+        elif einrichtungsjahr >= 1984 and einrichtungsjahr <= 2005:
             schnee_alt = schneeregellast_4013
             norm = "ÖNORM B 4013"
         
@@ -295,13 +340,33 @@ def show_snow_on_roof_pultdach():
         if "roof_angle_pultdach" in request.form:
             roof_angle_pultdach = request.form["roof_angle_pultdach"]
     
-    if int(roof_angle_pultdach) >= 0 and int(roof_angle_pultdach) < 30 and norm == "ÖNORM B 4013":
+    if int(roof_angle_pultdach) >=0 and int(roof_angle_pultdach) < 30 and norm == "ÖNORM B 4000":
+        µ_1_neu = 0.8
+        µ_1_alt = 1.0
+    
+    elif int(roof_angle_pultdach) >=30 and int(roof_angle_pultdach) < 60 and norm == "ÖNORM B 4000":
+        µ_1_neu = 0.8 * (60 - int(roof_angle_pultdach)) / 30
+        µ_1_alt = 1.0 * (70 - int(roof_angle_pultdach)) / 40
+
+    elif int(roof_angle_pultdach) >= 60 and int(roof_angle_pultdach) < 70 and norm == "ÖNORM B 4000":
+        µ_1_neu = 0
+        µ_1_alt = 1.0 * (70 - int(roof_angle_pultdach)) / 40
+
+    elif int(roof_angle_pultdach) >= 70 and norm == "ÖNORM B 4000":
+        µ_1_neu = 0
+        µ_1_alt = 0    
+
+
+
+    elif int(roof_angle_pultdach) >= 0 and int(roof_angle_pultdach) < 30 and norm == "ÖNORM B 4013":
         µ_1_neu = 0.8
         µ_1_alt = 1.0 
 
     elif int(roof_angle_pultdach) >= 30 and int(roof_angle_pultdach) < 60 and norm == "ÖNORM B 4013":
         µ_1_neu = 0.8 * (60 - int(roof_angle_pultdach)) / 30
         µ_1_alt = 1.0 * (60 - int(roof_angle_pultdach)) / 30
+
+
 
     elif int(roof_angle_pultdach) >= 0 and int(roof_angle_pultdach) < 30 and norm == "EN 1991-1-3 2006":
         µ_1_neu = 0.8
@@ -311,7 +376,9 @@ def show_snow_on_roof_pultdach():
         µ_1_neu = 0.8 * (60 - int(roof_angle_pultdach)) / 30
         µ_1_alt = 0.8 * (60 - int(roof_angle_pultdach)) / 30
 
-    elif int(roof_angle_pultdach) >= 60:
+    
+    
+    elif int(roof_angle_pultdach) >= 60 and norm != "ÖNORM B 4000":
         µ_1_neu = 0
         µ_1_alt = 0
 
@@ -341,8 +408,30 @@ def show_snow_on_roof_satteldach():
         if "roof_angle_satteldach_2" in request.form:
             roof_angle_satteldach_2 = request.form["roof_angle_satteldach_2"]
 
+    #First roof part
     
-    if int(roof_angle_satteldach_1) >= 0 and int(roof_angle_satteldach_1) < 15 and norm == "ÖNORM B 4013":
+    if int(roof_angle_satteldach_1) >= 0 and int(roof_angle_satteldach_1) < 15 and norm == "ÖNORM B 4000":
+        µ_2_neu_1 = 0.8
+        µ_2_alt_1 = 1.0
+    
+    elif int(roof_angle_satteldach_1) >= 15 and int(roof_angle_satteldach_1) < 30 and norm == "ÖNORM B 4000":
+        µ_2_neu_1 = 0.8 + 0.2 * (int(roof_angle_satteldach_1) - 15) / 15
+        µ_2_alt_1 = 1.0
+
+    elif int(roof_angle_satteldach_1) >= 30 and int(roof_angle_satteldach_1) < 60 and norm == "ÖNORM B 4000":
+        µ_2_neu_1 = 1.0 * (60 - int(roof_angle_satteldach_1)) / 30
+        µ_2_alt_1 = 1.0 * (70 - int(roof_angle_satteldach_1)) / 40
+    
+    elif int(roof_angle_satteldach_1) >= 60 and int(roof_angle_satteldach_1) < 70 and norm == "ÖNORM B 4000":
+        µ_2_neu_1 = 0
+        µ_2_alt_1 = 1.0 * (70 - int(roof_angle_satteldach_1)) / 40
+
+    elif int(roof_angle_satteldach_1) >= 70 and norm == "ÖNORM B 4000":
+        µ_2_neu_1 = 0
+        µ_2_alt_1 = 0
+  
+    
+    elif int(roof_angle_satteldach_1) >= 0 and int(roof_angle_satteldach_1) < 15 and norm == "ÖNORM B 4013":
         µ_2_neu_1 = 0.8
         µ_2_alt_1 = 1.0
 
@@ -367,16 +456,35 @@ def show_snow_on_roof_satteldach():
         µ_2_neu_1 = 1.0 * (60 - int(roof_angle_satteldach_1)) / 30
         µ_2_alt_1 = 0.8 * (60 - int(roof_angle_satteldach_1)) / 30
     
-    elif int(roof_angle_satteldach_1) >= 60:
+    elif int(roof_angle_satteldach_1) >= 60 and norm != "ÖNORM B 4000":
         µ_2_neu_1 = 0
         µ_2_alt_1 = 0
 
 
+    ## Second roof part
+
+    if int(roof_angle_satteldach_2) >= 0 and int(roof_angle_satteldach_2) < 15 and norm == "ÖNORM B 4000":
+        µ_2_neu_2 = 0.8
+        µ_2_alt_2 = 1.0
+    
+    elif int(roof_angle_satteldach_2) >= 15 and int(roof_angle_satteldach_2) < 30 and norm == "ÖNORM B 4000":
+        µ_2_neu_2 = 0.8 + 0.2 * (int(roof_angle_satteldach_2) - 15) / 15
+        µ_2_alt_2 = 1.0
+
+    elif int(roof_angle_satteldach_2) >= 30 and int(roof_angle_satteldach_2) < 60 and norm == "ÖNORM B 4000":
+        µ_2_neu_2 = 1.0 * (60 - int(roof_angle_satteldach_2)) / 30
+        µ_2_alt_2 = 1.0 * (70 - int(roof_angle_satteldach_2)) / 40
+    
+    elif int(roof_angle_satteldach_2) >= 60 and int(roof_angle_satteldach_2) < 70 and norm == "ÖNORM B 4000":
+        µ_2_neu_2 = 0
+        µ_2_alt_2 = 1.0 * (70 - int(roof_angle_satteldach_2)) / 40
+
+    elif int(roof_angle_satteldach_2) >= 70 and norm == "ÖNORM B 4000":
+        µ_2_neu_2 = 0
+        µ_2_alt_2 = 0
 
 
-
-
-    if int(roof_angle_satteldach_2) >= 0 and int(roof_angle_satteldach_2) < 15 and norm == "ÖNORM B 4013":
+    elif int(roof_angle_satteldach_2) >= 0 and int(roof_angle_satteldach_2) < 15 and norm == "ÖNORM B 4013":
         µ_2_neu_2 = 0.8
         µ_2_alt_2 = 1.0
 
@@ -401,7 +509,7 @@ def show_snow_on_roof_satteldach():
         µ_2_neu_2 = 1.0 * (60 - int(roof_angle_satteldach_2)) / 30
         µ_2_alt_2 = 0.8 * (60 - int(roof_angle_satteldach_2)) / 30
     
-    elif int(roof_angle_satteldach_2) >= 60:
+    elif int(roof_angle_satteldach_2) >= 60 and norm != "ÖNORM B 4000":
         µ_2_neu_2 = 0
         µ_2_alt_2 = 0
 
@@ -417,3 +525,8 @@ def show_snow_on_roof_satteldach():
     roof_schnee_alt_1=roof_schnee_alt_1, roof_schnee_neu_1=roof_schnee_neu_1, 
     roof_schnee_alt_2=roof_schnee_alt_2, roof_schnee_neu_2=roof_schnee_neu_2,
     roof_type=roof_type+'.png', norm=norm)
+
+
+
+if __name__ == '__main__':
+    app.run(host="0.0.0.0")    

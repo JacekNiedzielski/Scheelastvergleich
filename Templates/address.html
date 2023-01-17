@@ -7,29 +7,30 @@
     <div class="row justify-content-start">
         <div class="col-5 h1">Adresse und Bemessungsparameter</div>
     </div>
-  
 
+    
     <form id="address_form" action="{{ url_for('show_snow_at_address') }}" method="POST">
 
         <div class ="row justify-content-start">
+            <div class="col-3 col-form-label"><label for="city">City</label></div>
+            <div class="col-4"><input type="text" id="city" name="city" class="form-control" value="{{nearest_city if nearest_city else 'Wien'}}"></div>
+        </div>
+ 
+        <div class ="row justify-content-start">
             <div class="col-3 col-form-label"><label for="street">Street</label></div>
-            <div class="col-4"><input type="text" id="street" name="street" class="form-control" value="Stephansplatz"></div>
+            <div class="col-4"><input type="text" id="street" name="street" class="form-control" value="{{ ' ' if nearest_city else 'Stephansplatz'}}"></div>
         </div>   
         
         <div class ="row justify-content-start">
             <div class="col-3 col-form-label"><label for="house_number">House number</label></div>
-            <div class="col-4"><input type="text" id="house_number" name="house_number" class="form-control" value="1"></div>
+            <div class="col-4"><input type="text" id="house_number" name="house_number" class="form-control" value="{{' ' if nearest_city else '1'}}"></div>
         </div>  
         
         <div class ="row justify-content-start">
             <div class="col-3 col-form-label"><label for="postal_code">Postal Code</label></div>
-            <div class="col-4"><input type="text" id="postal_code" name="postal_code" class="form-control" value="1010"></div>
+            <div class="col-4"><input type="text" id="postal_code" name="postal_code" class="form-control" value="{{' ' if nearest_city else '1010'}}"></div>
         </div>
-      
-        <div class ="row justify-content-start">
-            <div class="col-3 col-form-label"><label for="city">City</label></div>
-            <div class="col-4"><input type="text" id="city" name="city" class="form-control" value="Wien"></div>
-        </div>
+    
         <br>
         <div class ="row justify-content-start">
             <div class="col-3 col-form-label"><label for="seehoehe">Seehöhe (für die Berechnungen laut alten Normen)</label></div>

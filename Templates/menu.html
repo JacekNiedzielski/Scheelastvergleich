@@ -7,10 +7,10 @@
       <div class="collapse navbar-collapse" id="navbarSupportedContent">
         <ul class="navbar-nav me-auto mb-2 mb-lg-0">
           <li class="nav-item">
-            <a class="nav-link active" aria-current="page" href="{{ url_for('index') }}">Home</a>
+            <a class="nav-link {{ 'active' if active_menu == 'Home'}}" aria-current="page" href="{{ url_for('index') }}">Home</a>
           </li>
           <li class="nav-item">
-            <a class="nav-link" href="{{ url_for('show_snow_at_address') }}">Eingabe von Daten</a>
+            <a class="nav-link {{ 'active' if active_menu == 'Eingabe von Daten'}}" href="{{ url_for('show_snow_at_address') }}">Eingabe von Daten</a>
           </li>
 
           <li class="nav-item dropdown">
