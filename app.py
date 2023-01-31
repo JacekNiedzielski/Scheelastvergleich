@@ -20,6 +20,10 @@ df_4000.drop("Unnamed: 0", inplace=True, axis=1)
 
 
 
+beiwert_schnee = 1.5
+beiwert_PV = 1.35
+
+
 def shorten(element):
     element = element[:-2]
     return element
@@ -83,7 +87,7 @@ def show_snow_at_address(old_snow=df, old_snow_4000 = df_4000):
         params = {"address": address_string}
         print(address_string)
         r = requests.get("https://hora.gv.at/Services/Data", params)
-
+        #print(r)    
         data = r.json()
         schneelast = round(float(data["data"]["schneelast"]),3)
         #print(schneelast)
@@ -184,8 +188,12 @@ def show_snow_at_address(old_snow=df, old_snow_4000 = df_4000):
             return render_template("city_not_found.html", cities = cities_4013_EC)
 
 
-    
+        self_weight = 20
 
+        if "self_weight" in request.form:
+            self_weight = int(request.form["self_weight"])
+
+        
         seehoehe = "Seehoehe von Stadt"
 
         if "seehoehe" in request.form:
@@ -317,12 +325,16 @@ def show_snow_at_address(old_snow=df, old_snow_4000 = df_4000):
         session["schneelast"] = schneelast
         session["address"] = address_string
         session["norm"] = norm
+        session["self_weight"] = self_weight
+
         
         if roof_type == 'Satteldach':
-            return render_template("snow_and_Satteldach.html", schneelast=schneelast, address = address_string, schnee_alt=schnee_alt, roof_type=roof_type+'.png', norm=norm)
+            return render_template("snow_and_Satteldach.html", schneelast=schneelast, address = address_string, schnee_alt=schnee_alt, 
+                                                                roof_type=roof_type+'.png', norm=norm)
 
         if roof_type == 'Pultdach':
-            return render_template("snow_and_Pultdach.html", schneelast=schneelast, address = address_string, schnee_alt=schnee_alt, roof_type=roof_type+'.png', norm=norm)
+            return render_template("snow_and_Pultdach.html", schneelast=schneelast, address = address_string, schnee_alt=schnee_alt, 
+                                                                roof_type=roof_type+'.png', norm=norm)
 
 
 
@@ -334,6 +346,7 @@ def show_snow_on_roof_pultdach():
     roof_type = session["roof_type"]
     address_string = session["address"]
     norm = session["norm"]
+    self_weight = session["self_weight"]
 
     if request.method == "POST":
         roof_angle_pultdach = 0
@@ -386,7 +399,8 @@ def show_snow_on_roof_pultdach():
     roof_schnee_neu = round(schneelast*µ_1_neu,3)
 
     return render_template("results_pultdach.html", schneelast=schneelast, address = address_string, schnee_alt=schnee_alt,
-    roof_angle_pultdach=roof_angle_pultdach, roof_schnee_alt=roof_schnee_alt, roof_schnee_neu=roof_schnee_neu, roof_type=roof_type+'.png', norm=norm)
+    roof_angle_pultdach=roof_angle_pultdach, roof_schnee_alt=roof_schnee_alt, roof_schnee_neu=roof_schnee_neu, 
+    roof_type=roof_type+'.png', norm=norm, self_weight=self_weight, beiwert_schnee = beiwert_schnee, beiwert_PV = beiwert_PV)
 
 
 
@@ -398,6 +412,7 @@ def show_snow_on_roof_satteldach():
     roof_type = session["roof_type"]
     address_string = session["address"]
     norm = session["norm"]
+    self_weight = session["self_weight"]
 
     if request.method == "POST":
         roof_angle_satteldach_1 = 0
@@ -524,7 +539,7 @@ def show_snow_on_roof_satteldach():
     roof_angle_satteldach_1=roof_angle_satteldach_1, roof_angle_satteldach_2=roof_angle_satteldach_2, 
     roof_schnee_alt_1=roof_schnee_alt_1, roof_schnee_neu_1=roof_schnee_neu_1, 
     roof_schnee_alt_2=roof_schnee_alt_2, roof_schnee_neu_2=roof_schnee_neu_2,
-    roof_type=roof_type+'.png', norm=norm)
+    roof_type=roof_type+'.png', norm=norm, self_weight=self_weight, beiwert_schnee=beiwert_schnee, beiwert_PV=beiwert_PV)
 
 
 

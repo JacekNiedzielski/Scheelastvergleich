@@ -3,42 +3,52 @@
 
 {% block content %}
      
+
+<div class="row">
+    <div class="col d-flex justify-content-center h4">Allgemeiner Statischer Nachweis für die Anordnung von PV Modulen auf Dächern</div>
+    <HR>
+</div>
+<br>
+<br>
+
+
 <div class="container">
-    <div class="row justify-content-start">
-        <div class="col-5 h1">Adresse und Bemessungsparameter</div>
+    <div class="row justify-content-center">
+        <div class="col-7 h4">Adresse und Bemessungsparameter</div>
     </div>
+    <br>
 
     
     <form id="address_form" action="{{ url_for('show_snow_at_address') }}" method="POST">
 
-        <div class ="row justify-content-start">
-            <div class="col-3 col-form-label"><label for="city">City</label></div>
+        <div class ="row justify-content-center">
+            <div class="col-3 col-form-label"><label for="city">Stadt/Ortschaft</label></div>
             <div class="col-4"><input type="text" id="city" name="city" class="form-control" value="{{nearest_city if nearest_city else 'Wien'}}"></div>
         </div>
  
-        <div class ="row justify-content-start">
-            <div class="col-3 col-form-label"><label for="street">Street</label></div>
+        <div class ="row justify-content-center">
+            <div class="col-3 col-form-label"><label for="street">Straße</label></div>
             <div class="col-4"><input type="text" id="street" name="street" class="form-control" value="{{ ' ' if nearest_city else 'Stephansplatz'}}"></div>
         </div>   
         
-        <div class ="row justify-content-start">
-            <div class="col-3 col-form-label"><label for="house_number">House number</label></div>
+        <div class ="row justify-content-center">
+            <div class="col-3 col-form-label"><label for="house_number">Hausnummer</label></div>
             <div class="col-4"><input type="text" id="house_number" name="house_number" class="form-control" value="{{' ' if nearest_city else '1'}}"></div>
         </div>  
         
-        <div class ="row justify-content-start">
-            <div class="col-3 col-form-label"><label for="postal_code">Postal Code</label></div>
+        <div class ="row justify-content-center">
+            <div class="col-3 col-form-label"><label for="postal_code">Postleitzahl</label></div>
             <div class="col-4"><input type="text" id="postal_code" name="postal_code" class="form-control" value="{{' ' if nearest_city else '1010'}}"></div>
         </div>
     
         <br>
-        <div class ="row justify-content-start">
+        <div class ="row justify-content-center">
             <div class="col-3 col-form-label"><label for="seehoehe">Seehöhe (für die Berechnungen laut alten Normen)</label></div>
             <div class="col-4"><input type="text" id="seehoehe" name="seehoehe" class="form-control" value="Seehoehe von Stadt"></div>
         </div>
         <br>
        
-        <div class ="row justify-content-start">
+        <div class ="row justify-content-center">
             <div class="col-3 col-form-label"><label for="einrichtungsjahr">Einrichtungsjahr</label></div>
             <div class="col-4">
                 <select id="einrichtungsjahr" name="einrichtungsjahr" class="form-select">
@@ -49,7 +59,7 @@
             </div>
         </div>
         <br>
-        <div class ="row justify-content-start">
+        <div class ="row justify-content-center">
             <div class="col-3 col-form-label"><label for="roof_type">Dachtyp</label></div>
             <div class="col-4">
                 <select id="roof_type" name="roof_type" class="form-select" value="Pultdach">
@@ -57,14 +67,17 @@
                 <option value = "Satteldach">Satteldach</option> 
                 </select>  
             </div>
-       
+    
         </div>
-
-          
         <br>
-        <div class="row justify-content-start">
+        <div class ="row justify-content-center">
+            <div class="col-3 col-form-label"><label for="self_weight">Eigengewicht von PV Modul in kg/m2</label></div>
+            <div class="col-4"><input type="text" id="self_weight" name="self_weight" class="form-control" value=20></div>
+        </div>
+        <br>
+        <div class="row justify-content-center">
             <div class="col-3"></div>
-            <div class="col-2"><input type="submit" value="Weiter" class="btn btn-primary"></div>
+            <div class="col-4"><input type="submit" value="Weiter" class="btn btn-primary"></div>
         </div>
 
         </form>
