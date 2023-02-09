@@ -300,16 +300,16 @@ def show_snow_at_address(old_snow=df, old_snow_4000 = df_4000):
 
         
         if einrichtungsjahr < 1984 and einrichtungsjahr >=1960:
-            schnee_alt = schneeregellast_4000
+            schnee_alt = round(schneeregellast_4000,3)
             norm = "ÖNORM B 4000" 
         
         
         elif einrichtungsjahr >= 1984 and einrichtungsjahr <= 2005:
-            schnee_alt = schneeregellast_4013
+            schnee_alt = round(schneeregellast_4013,3)
             norm = "ÖNORM B 4013"
         
         elif einrichtungsjahr >= 2006 and  einrichtungsjahr < 2022:
-            schnee_alt = schneeregellast_EC2006
+            schnee_alt = round(schneeregellast_EC2006,3)
             norm = "EN 1991-1-3 2006"
 
         elif einrichtungsjahr >= 2022:
