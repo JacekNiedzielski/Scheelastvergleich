@@ -5,6 +5,7 @@ import pandas as pd
 import math
 import datetime
 import os
+import math
 
 template_dir = os.path.abspath("Templates")
 
@@ -394,13 +395,15 @@ def show_snow_on_roof_pultdach():
     elif int(roof_angle_pultdach) >= 60 and norm != "ÖNORM B 4000":
         µ_1_neu = 0
         µ_1_alt = 0
+    
+    projected_self_weight = self_weight / math.cos(math.radians(int(roof_angle_pultdach)))
 
     roof_schnee_alt = round(schnee_alt*µ_1_alt,3)
     roof_schnee_neu = round(schneelast*µ_1_neu,3)
 
     return render_template("results_pultdach.html", schneelast=schneelast, address = address_string, schnee_alt=schnee_alt,
     roof_angle_pultdach=roof_angle_pultdach, roof_schnee_alt=roof_schnee_alt, roof_schnee_neu=roof_schnee_neu, 
-    roof_type=roof_type+'.png', norm=norm, self_weight=self_weight, beiwert_schnee = beiwert_schnee, beiwert_PV = beiwert_PV)
+    roof_type=roof_type+'.png', norm=norm, self_weight=self_weight, projected_self_weight=projected_self_weight, beiwert_schnee = beiwert_schnee, beiwert_PV = beiwert_PV)
 
 
 
@@ -528,6 +531,9 @@ def show_snow_on_roof_satteldach():
         µ_2_neu_2 = 0
         µ_2_alt_2 = 0
 
+    
+    projected_self_weight_1 = self_weight / math.cos(math.radians(int(roof_angle_satteldach_1)))
+    projected_self_weight_2 = self_weight / math.cos(math.radians(int(roof_angle_satteldach_2)))
 
     roof_schnee_alt_1 = round(schnee_alt*µ_2_alt_1,3)
     roof_schnee_neu_1 = round(schneelast*µ_2_neu_1,3)
@@ -539,7 +545,7 @@ def show_snow_on_roof_satteldach():
     roof_angle_satteldach_1=roof_angle_satteldach_1, roof_angle_satteldach_2=roof_angle_satteldach_2, 
     roof_schnee_alt_1=roof_schnee_alt_1, roof_schnee_neu_1=roof_schnee_neu_1, 
     roof_schnee_alt_2=roof_schnee_alt_2, roof_schnee_neu_2=roof_schnee_neu_2,
-    roof_type=roof_type+'.png', norm=norm, self_weight=self_weight, beiwert_schnee=beiwert_schnee, beiwert_PV=beiwert_PV)
+    roof_type=roof_type+'.png', norm=norm, projected_self_weight_1=projected_self_weight_1, projected_self_weight_2=projected_self_weight_2, beiwert_schnee=beiwert_schnee, beiwert_PV=beiwert_PV)
 
 
 

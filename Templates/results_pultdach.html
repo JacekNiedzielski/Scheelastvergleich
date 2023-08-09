@@ -3,93 +3,94 @@
 <!DOCTYPE html>
 
 <html>
-    <head>
-        <title>SnowLoadAccNewStandard</title>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    </head>
+
+<head>
+    <title>SnowLoadAccNewStandard</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
 {% block content %}
-    
+
 <div class="row">
     <div class="col-1"></div>
-    <div class="col d-flex justify-content-center h4">Allgemeiner Statischer Nachweis für die Anordnung von PV Modulen auf Dächern</div>
+    <div class="col d-flex justify-content-center h4">Allgemeiner Statischer Nachweis für die Anordnung von PV Modulen
+        auf Dächern</div>
     <HR>
 </div>
 
-            <div class="container">
-                <div class="row justify-content-start">
-                    <div class="col-12">
-                        <p>Sie haben die folgende Adresse gewählt: <strong>{{ address }}</strong>. <br>
-                        Die Schneelast auf dem Boden gemäß ÖNORM B 1991-1-3:2022-05 beträgt {{ schneelast }} kN/m2.
-                        <a style="font-style: italic; font-size: small;">Datenquelle: &copy; hora.gv.at, 2023</a><br>
-                        Die Schneelast auf dem Boden gemäß {{ norm }} beträgt {{ schnee_alt }} kN/m2.<br><br>
-                        </p>
-                    </div>
-                </div>
-            </div>
-            <br>    
-            
-            <div class="container">
-                <div class="row justify-content-start">
-                    <div class="col-5"><img src="{{url_for('static', filename=roof_type)}}"></div>
-                </div>
+<div class="container">
+    <div class="row justify-content-start">
+        <div class="col-12">
+            <p>Sie haben die folgende Adresse gewählt: <strong>{{ address }}</strong>. <br>
+                Die Schneelast auf dem Boden gemäß ÖNORM B 1991-1-3:2022-05 beträgt {{ schneelast }} kN/m2.
+                <a style="font-style: italic; font-size: small;">Datenquelle: &copy; hora.gv.at, 2023</a><br>
+                Die Schneelast auf dem Boden gemäß {{ norm }} beträgt {{ schnee_alt }} kN/m2.<br><br>
+            </p>
+        </div>
+    </div>
+</div>
+<br>
+
+<div class="container">
+    <div class="row justify-content-start">
+        <div class="col-5"><img src="{{url_for('static', filename=roof_type)}}"></div>
+    </div>
+
+    <div class="row justify-content-start">
+        <div class="col-12">
+            <p>Der gewählte Winkel beträgt: <strong>{{ roof_angle_pultdach }}°</strong>. <br>
+                Die Schneelast auf dem Dach gemäß ÖNORM B 1991-1-3:2022-05 beträgt {{ roof_schnee_neu }} kN/m2.<br>
+                Die Schneelast auf dem Dach gemäß {{ norm }} beträgt {{ roof_schnee_alt }} kN/m2.
+            </p>
+
+            {% if roof_schnee_neu < roof_schnee_alt %} <br>
+                <p>Der Vorrat beträgt <strong>{{'{0:0.3f}'.format(roof_schnee_alt - roof_schnee_neu)}} kN/m2.</strong>
+                </p>
 
                 <div class="row justify-content-start">
                     <div class="col-12">
-                        <p>Der gewählte Winkel beträgt: <strong>{{ roof_angle_pultdach }}°</strong>. <br>
-                        Die Schneelast auf dem Dach gemäß ÖNORM B 1991-1-3:2022-05 beträgt {{ roof_schnee_neu }} kN/m2.<br>
-                        Die Schneelast auf dem Dach gemäß {{ norm }} beträgt {{ roof_schnee_alt }} kN/m2.
-                        </p>
-                        
-                        {% if roof_schnee_neu < roof_schnee_alt %}
-                        <br>
-                        <p>Der Vorrat beträgt <strong>{{'{0:0.3f}'.format(roof_schnee_alt - roof_schnee_neu)}} kN/m2.</strong></p>
-
-                        <div class="row justify-content-start">
-                            <div class="col-12">
-                                <p>Ihres PV Modul wiegt <strong>{{ '{0:0.3f}'.format(self_weight/100) }} kN/m2</strong>
-                                </p>
-                            </div>
-                        </div>
-                        <div class="row justify-content-start">
-                            <div class="col-12">
-                                <strong><p>Die entsprechende Bemessungswerte betragen:
-                                  <br>
-                                {{ '{0:0.3f}'.format(beiwert_schnee * (roof_schnee_alt - roof_schnee_neu)) }} kN/m2 für den Bemessungsvorrat
-                                <br>
-                                {{ '{0:0.3f}'.format(beiwert_PV * self_weight/100) }} kN/m2 für das Eigengewicht des PV Moduls
-                                </p></strong>
-                            </div>
-                        {% if beiwert_schnee * (roof_schnee_alt - roof_schnee_neu) >= beiwert_PV * self_weight/100 %}
-                        <span style="color:green"><h2>PV Modul kann installiert werden</h2></span>
-                        {% else %}
-                        <span style="color:red"><h2>Kein Vorrat vorhanden! Genauere statische Untersuchung notwendig!</h2></span>
-                        {% endif %}
-                        
-                        {% else %}
-                        <br>
-                        <span style="color:red"><h2>Kein Vorrat vorhanden! Genauere statische Untersuchung notwendig!</h2></span>
-
-                        {% endif %}
+                        <p>Ihr PV Modul wiegt <strong>{{ '{0:0.3f}'.format(self_weight/100) }} kN/m2</strong>
+                            bzw. <strong>{{ '{0:0.3f}'.format(projected_self_weight/100) }} kN/m2</strong> (projiziert
+                            auf die Grundfläche)
                         </p>
                     </div>
                 </div>
+                <div class="row justify-content-start">
+                    <div class="col-12">
+                        <p>Die entsprechende Bemessungswerte betragen:
+                            <br>
+                            <strong> {{ '{0:0.3f}'.format(beiwert_schnee * (roof_schnee_alt - roof_schnee_neu)) }} kN/m2
+                            </strong> für den Bemessungsvorrat
+                            <br>
+                            <strong> {{ '{0:0.3f}'.format(beiwert_PV * projected_self_weight/100) }} kN/m2 </strong> für
+                            das Eigengewicht des PV Moduls (projiziert auf die Grundfläche)
+                        </p>
+                    </div>
+                    {% if beiwert_schnee * (roof_schnee_alt - roof_schnee_neu) >= beiwert_PV * projected_self_weight/100
+                    %}
+                    <span style="color:green">
+                        <h2>PV Modul kann installiert werden</h2>
+                    </span>
+                    {% else %}
+                    <span style="color:red">
+                        <h2>Kein Vorrat vorhanden! Genauere statische Untersuchung notwendig!</h2>
+                    </span>
+                    {% endif %}
 
-                
+                    {% else %}
+                    <br>
+                    <span style="color:red">
+                        <h2>Kein Vorrat vorhanden! Genauere statische Untersuchung notwendig!</h2>
+                    </span>
+
+                    {% endif %}
+                    </p>
                 </div>
+        </div>
+    </div>
+    <br>
+    <br>
 
+    {% endblock %}
 
-
-
-
-
-            
-               
-
-
-
-
- 
-
-{% endblock %}
 </html>
